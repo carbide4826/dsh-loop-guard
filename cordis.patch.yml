@@ -1,0 +1,7 @@
+# 分发配置层:本插件在 profile 中的注册行(dsh plugin --profile <name> add ./ 后生效)。
+# 注意:patch 按 id 定位并整行替换 config,不做合并。
+- insert:
+    - id: dsh-loop-guard
+      name: 'dsh-loop-guard'
+      config:
+        example: 'TODO-按需修改'
