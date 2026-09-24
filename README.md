@@ -2,9 +2,9 @@
 
 Guard against repetitive tool-call loops with threshold-based interruption
 
-> 由 [dshp](https://github.com/carbide4826/dsh-plugin-cli) 生成 · 依赖版本 DSH 0.1.5-rc.2
+> 由 [dshp](https://github.com/carbide4826/dsh-plugin-cli) 生成 · 依赖版本 DSH 0.1.7-rc.1
 
-　　**版本跟随 dsh**:所有 `@deepseek-ai/dsh-*` 跟随 DSH 版本线,当前固定在 0.1.5-rc.2;后续随官方迭代跟踪更新。
+　　**版本跟随 dsh**:所有 `@deepseek-ai/dsh-*` 跟随 DSH 版本线,当前固定在 0.1.7-rc.1(0.1.7 线最新);后续随官方迭代跟踪更新。
 
 　　**Node 要求**:`^22.19.0 || >=24.0.0`。
 
@@ -23,7 +23,7 @@ pnpm typecheck        # 类型检查
 　　在**本项目根目录**执行:
 
 ```sh
-pnpm add -D @deepseek-ai/dsh@0.1.5-rc.2  # 安装 dsh(②)
+pnpm add -D @deepseek-ai/dsh@0.1.7-rc.1  # 安装 dsh(②)
 ```
 
 ### 3. 不启动,只检查
@@ -83,4 +83,5 @@ src/index.ts        插件入口(name/inject/apply)
 ```
 
 src/events.ts        事件域聚合
+src/fingerprint.ts   指纹器(工具名+参数哈希,精确/归一两档)
 src/domains/         各事件域监听(ctx.on)

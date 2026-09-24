@@ -3,7 +3,11 @@
   "version": "0.0.2",
   "description": "Guard against repetitive tool-call loops with threshold-based interruption",
   "type": "module",
-  "author": "fangyan",
+  "author": "carbide4826",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/carbide4826/dsh-loop-guard.git"
+  },
   "license": "MIT",
   "dsh": {
     "bundle": {
@@ -30,9 +34,10 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.2",
-    "@deepseek-ai/dsh-tools": "0.1.5-rc.2"
+    "@deepseek-ai/dsh-tools": "0.1.7-rc.1"
   },
   "devDependencies": {
+    "@deepseek-ai/dsh": "0.1.7-rc.1",
     "@types/node": "^22.10.0",
     "tsdown": "^0.23.0",
     "typescript": "^5.6.0"
