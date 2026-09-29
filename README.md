@@ -70,7 +70,7 @@ dsh plugin --profile web add dsh-loop-guard
 dsh plugin --profile web add github:carbide4826/dsh-loop-guard
 ```
 
-git 源的包安装时会在本机跑构建(prepare)脚本,pnpm 默认拦截:按报错提示把对应 key 加进 profile 目录的 pnpm-workspace.yaml 的 allowBuilds,再重跑一次 add。
+本仓在 prepare 钩子里挂了 tsdown,git 源安装时会在本机自动构建出 dist/。pnpm 默认拦这类构建脚本:按报错提示把对应 key 加进 profile 目录的 pnpm-workspace.yaml 的 allowBuilds,再重跑一次 add。
 
 **3. 本地目录(开发中的仓)**
 

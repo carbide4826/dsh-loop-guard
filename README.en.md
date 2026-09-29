@@ -70,7 +70,7 @@ dsh plugin --profile web add dsh-loop-guard
 dsh plugin --profile web add github:carbide4826/dsh-loop-guard
 ```
 
-A git source runs its build (prepare) script on your machine during install, which pnpm blocks by default: add the key printed in the error to `allowBuilds` in the profile directory's `pnpm-workspace.yaml`, then re-run the add.
+This repo hooks tsdown into prepare, so installing from a git source builds dist/ on your machine automatically. pnpm blocks build scripts by default: add the key printed in the error to `allowBuilds` in the profile directory's `pnpm-workspace.yaml`, then re-run the add.
 
 **3. Local directory (repo under development)**
 
