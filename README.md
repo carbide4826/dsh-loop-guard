@@ -1,87 +1,124 @@
 # dsh-loop-guard
 
-Guard against repetitive tool-call loops with threshold-based interruption
+Guard against repetitive tool-call loops with threshold-based interruption.
 
-> 由 [dshp](https://github.com/carbide4826/dsh-plugin-cli) 生成 · 依赖版本 DSH 0.1.7-rc.1
+[English](https://github.com/carbide4826/dsh-loop-guard/blob/main/README.en.md)
 
-　　**版本跟随 dsh**:所有 `@deepseek-ai/dsh-*` 跟随 DSH 版本线,当前固定在 0.1.7-rc.1(0.1.7 线最新);后续随官方迭代跟踪更新。
+> 由 [dshp](https://github.com/carbide4826/dsh-plugin-cli) 生成 · dsh 插件命令行脚手架
 
-　　**Node 要求**:`^22.19.0 || >=24.0.0`。
+dsh 插件:检测模型对同一工具的重复调用,先提醒、再拒绝执行、必要时直接结束这一轮对话。
 
-## 快速开始
+## 工作原理
 
-### 1. 依赖安装到打包
+每次工具调用都算一个签名(由工具名和参数决定:同样的工具、同样的参数 = 同一个签名)。签名记进每个 agent 最近 N 次调用的清单里(N = capacity,记满就挤掉最旧的一条,数的是调用次数不是时间)。看同一个签名在清单里出现几次,分三步处置:
+
+- 出现到 threshold-1 次:往对话里插一条提醒,告诉模型"这个调用刚做过,换个参数或别再试了"
+- 出现到 threshold 次起:这个调用在真正执行前就被拦下,工具不跑,模型收到一条"重复调用被拒"的错误
+- 同一签名攒到 terminateAt 次:直接掐掉这一步、结束这一轮对话,省掉后面所有对模型的调用(那才是最烧 token 的部分)
+
+几条不误伤正常工作的设计:
+
+- 用户中途插一句话,该 agent 的清单就清空重来
+- 换了参数就是不同签名、各记各的:好处是"每轮微调一点"的正常任务不会被误判;代价是那种"每次只改一点点参数"的死循环数不到(有意接受)
+- 在 exempt 清单里列出的工具完全不参与计数,上面三步对它一律不生效
+
+**提醒:对话有时会"戛然而止"。**
+
+- 现象:签名攒到 terminateAt 次时守卫直接结束这一轮,模型来不及说收尾的话,界面上工具行之后突然安静——像无故中止,实际是终止线在工作
+- 判断:打开轨迹页或点开工具详情,有 loop-guard 的提醒行或被拒的工具行(文案含 blocked repeat)就是守卫在拦,没有就是别的原因
+- 恢复:会话没有被锁死,发任何新消息计数清零,对话照常继续;"停得明白"的改进见下方后续更新
+
+## 配置
+
+```yaml
+config:
+  granularity: normalized   # exact=参数原样参与哈希;normalized=归一后哈希(默认)
+  capacity: 12              # 必填,滑窗容量,整数 >=1
+  threshold: 3              # 必填,命中阈值,整数 >=2 且 <=capacity
+  terminateAt: 8            # 可选,终止线,整数 >threshold 且 <=capacity;不写=不启用终止
+  exempt:                   # 可选,豁免清单,按前缀匹配签名(写工具名即豁免其全部调用)
+    - bash
+```
+
+capacity/threshold 必填且没有默认值:缺了会在插件装载期直接抛错并指名缺哪个字段,这是刻意设计,不静默兜底。所有约束在装载期逐条校验,违规即拒载。
+
+## 安装
+
+### 官方插件管理页
+
+在管理页的安装入口填以下任一项即可:
+
+| 包源 | 填写内容 |
+| --- | --- |
+| npm 包 | `dsh-loop-guard` |
+| GitHub 仓库 | `https://github.com/carbide4826/dsh-loop-guard` |
+| 本地目录 | 本仓克隆到任意位置的绝对路径(如 `<你的目录>/dsh-loop-guard`) |
+
+### 命令行安装
+
+统一命令形态:dsh plugin --profile <name> add <包源>,参数原样转发给 pnpm 装进 profile。包源三种:
+
+**1. npm 包(正式发布)**
 
 ```sh
-pnpm install          # 安装依赖(①)
-pnpm build            # 构建
-pnpm typecheck        # 类型检查
+dsh plugin --profile web add dsh-loop-guard
 ```
 
-### 2. 前置准备:项目内安装 dsh
-
-　　在**本项目根目录**执行:
+**2. GitHub 仓库(未发布也能装,直接拉 git 源)**
 
 ```sh
-pnpm add -D @deepseek-ai/dsh@0.1.7-rc.1  # 安装 dsh(②)
+dsh plugin --profile web add github:carbide4826/dsh-loop-guard
 ```
 
-### 3. 不启动,只检查
+git 源的包安装时会在本机跑构建(prepare)脚本,pnpm 默认拦截:按报错提示把对应 key 加进 profile 目录的 pnpm-workspace.yaml 的 allowBuilds,再重跑一次 add。
 
-> 这里先用下面「方式二」的 `--patch` 做一次临时注入,确认插件行进得了组合树。
+**3. 本地目录(开发中的仓)**
 
 ```sh
-# 不启动,检查组合树里有本插件行:
-pnpm dsh web --patch ./dev.patch.yml --dump-config | grep -A 4 dsh-loop-guard
+dsh plugin --profile web add /path/to/dsh-loop-guard   # 在本仓根目录可写 .
 ```
 
-### 4. 配置注入(两种,二选一)
+走的是构建产物:先 pnpm build 产出 dist/,改完源码要重新 build + add 才生效。
 
-　　两种方式都是让宿主知道有这个插件,区别只在「装产物」还是「直载源码」。
+三种装法启动时都会按包内 dsh.bundle.patch 声明自动并入 cordis.patch.yml 注册行;开发期不想落 profile,可以用 dsh web --patch <file.yml> 做临时覆盖层(profile 层之后、同 id 整行替换,可重复传;patch 里 name 写绝对路径可直载 .ts 源码,改完即跑不用 build)。
 
-#### 方式一 · 插件 add(持久,走构建产物)
+装完/启动后要在 profile(或 patch)里补 capacity/threshold:必填无默认,缺了装载期直接抛。启动打印 Web 地址(默认 http://127.0.0.1:3080)即代表插件 apply 执行成功。
 
-　　前提:第 1 步已 `pnpm build`(装的是 `dist/` 产物,loader 按 `exports` 解析)。
+## 开发
 
 ```sh
-pnpm dsh plugin --profile web add .      # 在本项目根目录执行(③④⑧)
-pnpm dsh web                             # 启动(全走构建产物)
+pnpm install
+pnpm add -D @deepseek-ai/dsh@0.1.7-rc.2   # 宿主 CLI,上面 dsh 命令用它(全局装有 dsh 则不必)
+pnpm build                        # tsdown 产出 dist/
+pnpm typecheck                    # tsc --noEmit
 ```
 
-#### 方式二 · --patch 一次性注入(临时,直载源码)
+首次安装后按 pnpm 提示跑 `pnpm approve-builds`,放行 node-pty / koffi / @deepseek-ai/dsh-subprocess-local 的构建脚本。
 
-```sh
-pnpm dsh web --patch ./dev.patch.yml  # 启动(直载源码)(⑤⑥)
-```
+仓内 dev.patch.yml 是方式 3 的本机 overlay(含绝对路径,已 gitignore,不提交)。
 
-> 开发期用 `--patch` 直载 .ts 源码;`plugin add` 装的是构建产物,两条轨道互不影响。
-
-　　启动后打印 Web 地址(默认 http://127.0.0.1:3080)即代表 apply 已执行;功能级验证:工具在对话里让模型调用(需已配置模型),界面位打开 Web UI 对应位置查看。
-
-### 注意事项（tips）
-
-　　① **install 被祖先 workspace 劫持**:上级目录存在 `pnpm-workspace.yaml` 时,`pnpm install` 会被提升到该 workspace 根执行,本项目 `node_modules` 不生成(typecheck 报 Cannot find module);用 `pnpm install --ignore-workspace` 独立安装。
-
-　　② **装 dsh 时放行构建脚本**:pnpm 会拦截依赖的构建脚本(供应链保护),按提示跑 `pnpm approve-builds` 勾选 `node-pty` / `koffi` / `@deepseek-ai/dsh-subprocess-local`;`@google/genai` / `protobufjs` 的脚本是 no-op,不用批。
-
-　　③ **UI 界面位必须走 plugin add 才能渲染**:涉及 client 半边的界面位,`--patch` 直载只加载 host 半边、浏览器侧槽位注册不会发生(宿主按 npm 包身份聚合各包的 client 出口,file:// 直载没有包身份);必须先 `pnpm build` 再 `plugin add`。
-
-　　④ **web profile 是共用的**:多个插件都 add 进 web profile 会互相污染;需要隔离时换成自己命名的 profile。
-
-　　⑤ **dev.patch.yml 是生成物**:由 CLI 生成、内含本机绝对路径(机器私有),已在 `.gitignore` 中排除;不要提交,也不要手改。
-
-　　⑥ **相对导入写全 `.ts` 后缀**:dev 直载走 Node 原生类型剥离,后缀须与文件字面一致(注册层 `.ts`、React 组件 `.tsx`)。
-
-　　⑦ **项目身份是三个同名字段**:目录名(落盘位置)、`package.json` 的 `name`(包标识)、`src/index.ts` 的 `export const name`(Cordis 注册名)默认同值;改名要三者一起改,并同步 `cordis.patch.yml` 的 `- id:`(插件 id)与 `name:`(模块名,默认与包名同值),漏一处即身份错位(UI 案例另有 `tsdown.config.ts` 内的 client id)。经 `dshp create` 生成时已自动重写,无须手动同步。
-
-　　⑧ **改代码后要重新 build + 重新 add**:`plugin add` 装的是构建产物,改完源码不会自动生效——需重新 `pnpm build` 后再执行一次 `pnpm dsh plugin --profile web add .`(想边改边看走「方式二」直载)。
-
-### 代码结构
+## 代码结构
 
 ```
-src/index.ts        插件入口(name/inject/apply)
+src/index.ts          入口:Config 定义 + schema + apply(校验、建状态表、注册)
+src/chain.ts          计数器:agent 定长滑窗 + 装载期参数校验
+src/fingerprint.ts    指纹器:稳定序列化,exact/normalized 两档
+src/warning.ts        告警消息构造(自建 loop-guard 消息来源)
+src/events.ts         事件域聚合
+src/domains/tools.ts  post-execute 计数+告警,pre-execute deny
+src/domains/agent.ts  pre-step 清链与终止
 ```
 
-src/events.ts        事件域聚合
-src/fingerprint.ts   指纹器(工具名+参数哈希,精确/归一两档)
-src/domains/         各事件域监听(ctx.on)
+依赖版本线跟随 dsh,当前 `@deepseek-ai/dsh-*` 固定在 0.1.7-rc.2。Node 要求 `^22.19.0 || >=24.0.0`。
+
+## 后续更新
+
+- **遗言步**(计划中):到终止线先放行最后一步,让模型对当前状态给用户一句总结,再把这一轮收尾。
+
+## 更新日志
+
+历次变更见 [CHANGELOG](https://github.com/carbide4826/dsh-loop-guard/blob/main/CHANGELOG.md)。
+
+## 许可
+
+MIT,详见 [LICENSE](https://github.com/carbide4826/dsh-loop-guard/blob/main/LICENSE)。
