@@ -1,0 +1,2 @@
+# 占位:让 pnpm 把本仓当 workspace 根,不向上找上级目录的 workspace。
+# 仓内直接 pnpm install 就装进本仓 node_modules。
