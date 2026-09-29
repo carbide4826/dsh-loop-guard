@@ -50,7 +50,7 @@ Fill in any one of these at the install entry:
 
 | Source | Value |
 | --- | --- |
-| npm package | `dsh-loop-guard` |
+| npm package | `dsh-loop-guard@0.1.0` |
 | GitHub repository | `https://github.com/carbide4826/dsh-loop-guard` |
 | Local directory | the absolute path where you cloned this repo (e.g. `<your-directory>/dsh-loop-guard`) |
 
@@ -61,8 +61,10 @@ One shape for all three: `dsh plugin --profile <name> add <source>` — the argu
 **1. npm package (published releases)**
 
 ```sh
-dsh plugin --profile web add dsh-loop-guard
+dsh plugin --profile web add dsh-loop-guard@0.1.0
 ```
+
+Pinning the version is supported; installing 0.1.0 or later is recommended.
 
 **2. GitHub repository (installable before release, straight from git)**
 
@@ -82,7 +84,31 @@ This installs the build output: run `pnpm build` first to produce `dist/`, and a
 
 All three pull in the registration lines from `cordis.patch.yml` automatically at boot, via the package's `dsh.bundle.patch` declaration. During development, if you don't want to write into the profile, use `dsh web --patch <file.yml>` as a temporary overlay (applied after the profile layer, whole-entry replacement by id, repeatable; a patch whose `name` is an absolute path loads `.ts` source directly — edit and re-run, no build needed).
 
-After installing, `capacity`/`threshold` still have to be set in the profile (or patch): required, no defaults, missing means a throw at load time. A started server prints its Web address (default `http://127.0.0.1:3080`), which means the plugin's apply ran successfully.
+After installing, `capacity`/`threshold` still have to be set in the profile's `cordis.patch.yml` (or a `--patch` overlay): required, no defaults, missing means a throw at load time. A started server prints its Web address (default `http://127.0.0.1:3080`), which means the plugin's apply ran successfully.
+
+### The red message on the first boot after install
+
+Starting straight away always prints this:
+
+```
+dsh: warning: 1 entry did not activate dsh-loop-guard (dsh-loop-guard): Error:
+dsh-loop-guard: invalid capacity undefined — window size must be an integer >= 1
+```
+
+That is deliberate, not a broken install. This plugin has no screen to type parameters into (dsh's plugin configuration page requires the plugin to ship its own front-end page; a backend-only plugin shows a switch and nothing else), so the values go into a patch layer. Three steps:
+
+1. Open the `cordis.patch.yml` in the profile directory — the file sitting next to the `node_modules` in that error path (e.g. `<your dsh home>/profiles/web/cordis.patch.yml`)
+2. Append a block at the end, with the numbers you want (keep `id` exactly `dsh-loop-guard`: patches locate an entry by id and replace the whole line, which is what overrides the empty config in the published layer — so carry `name` along too; add `terminateAt` if you want termination, and it must be greater than `threshold`):
+
+   ```yaml
+   - id: dsh-loop-guard
+     name: "dsh-loop-guard"
+     config:
+       capacity: 12
+       threshold: 3
+   ```
+
+3. Restart dsh (a profile with dsh-hmr reloads on save). The install is right once `1 entry did not activate` no longer appears
 
 ## Development
 

@@ -1,6 +1,6 @@
 {
   "name": "dsh-loop-guard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Guard against repetitive tool-call loops with threshold-based interruption",
   "type": "module",
   "author": "carbide4826",
