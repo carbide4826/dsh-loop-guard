@@ -50,7 +50,7 @@ capacity/threshold 必填且没有默认值:缺了会在插件装载期直接抛
 
 | 包源 | 填写内容 |
 | --- | --- |
-| npm 包 | `dsh-loop-guard` |
+| npm 包 | `dsh-loop-guard@0.1.0` |
 | GitHub 仓库 | `https://github.com/carbide4826/dsh-loop-guard` |
 | 本地目录 | 本仓克隆到任意位置的绝对路径(如 `<你的目录>/dsh-loop-guard`) |
 
@@ -61,8 +61,10 @@ capacity/threshold 必填且没有默认值:缺了会在插件装载期直接抛
 **1. npm 包(正式发布)**
 
 ```sh
-dsh plugin --profile web add dsh-loop-guard
+dsh plugin --profile web add dsh-loop-guard@0.1.0
 ```
+
+支持写死版本号，建议安装 0.1.0 以上版本。
 
 **2. GitHub 仓库(未发布也能装,直接拉 git 源)**
 
@@ -82,7 +84,31 @@ dsh plugin --profile web add /path/to/dsh-loop-guard   # 在本仓根目录可�
 
 三种装法启动时都会按包内 dsh.bundle.patch 声明自动并入 cordis.patch.yml 注册行;开发期不想落 profile,可以用 dsh web --patch <file.yml> 做临时覆盖层(profile 层之后、同 id 整行替换,可重复传;patch 里 name 写绝对路径可直载 .ts 源码,改完即跑不用 build)。
 
-装完/启动后要在 profile(或 patch)里补 capacity/threshold:必填无默认,缺了装载期直接抛。启动打印 Web 地址(默认 http://127.0.0.1:3080)即代表插件 apply 执行成功。
+装完/启动后要在 profile 的 cordis.patch.yml(或 --patch 覆盖层)里补 capacity/threshold:必填无默认,缺了装载期直接抛。启动打印 Web 地址(默认 http://127.0.0.1:3080)即代表插件 apply 执行成功。
+
+### 装完第一次启动的红字
+
+直接启动必然会看到这一条:
+
+```
+dsh: warning: 1 entry did not activate dsh-loop-guard (dsh-loop-guard): Error:
+dsh-loop-guard: invalid capacity undefined — window size must be an integer >= 1
+```
+
+这是刻意设计,不是装坏了。本插件没有可填参数的界面(dsh 的插件配置页要求插件自带前端页面,纯后端插件只显示开关),参数只能写进 patch 层。三步:
+
+1. 打开 profile 目录里的 cordis.patch.yml,就是报错里那份 node_modules 的同级文件(如 `<你的 dsh home>/profiles/web/cordis.patch.yml`)
+2. 在末尾追加一段,数值按你的偏好填(`id` 必须保持 `dsh-loop-guard`:patch 按 id 定位、整行替换,才能覆盖发布层那条空 config;`name` 也要带着,替换是整行换;要开终止再补一行 `terminateAt`,取值必须大于 `threshold`):
+
+   ```yaml
+   - id: dsh-loop-guard
+     name: "dsh-loop-guard"
+     config:
+       capacity: 12
+       threshold: 3
+   ```
+
+3. 重启 dsh(启用 dsh-hmr 的 profile 保存即生效);不再出现 `1 entry did not activate` 即为成功
 
 ## 开发
 
