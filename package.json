@@ -1,0 +1,46 @@
+{
+  "name": "dsh-loop-guard",
+  "version": "0.1.0",
+  "description": "Guard against repetitive tool-call loops with threshold-based interruption",
+  "type": "module",
+  "author": "carbide4826",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/carbide4826/dsh-loop-guard.git"
+  },
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": [
+    "dist",
+    "cordis.patch.yml"
+  ],
+  "dependencies": {
+    "@deepseek-ai/dsh-brand": "0.1.7-rc.2",
+    "@deepseek-ai/schemastery": "~3.18.4"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.0.4",
+    "@deepseek-ai/dsh-tools": "0.1.7-rc.2"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-llm": "0.1.7-rc.2",
+    "@types/node": "^22.10.0",
+    "tsdown": "^0.23.0",
+    "typescript": "^5.6.0"
+  }
+}

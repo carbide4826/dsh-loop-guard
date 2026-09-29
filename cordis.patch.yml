@@ -1,0 +1,13 @@
+# 分发配置层:本插件在 profile 中的注册行(dsh plugin --profile <name> add ./ 后生效)。
+# patch 按 id 定位、整行替换,不做合并。
+# config 留空:capacity/threshold 必填无默认,使用者不填就装载期直接抛,
+# 错误信息指名缺哪个字段;兜默认值会让窗口大小变成没人负责的隐式约定。
+# 使用者要填的字段:
+#   capacity    必填,滑窗容量,整数 >=1
+#   threshold   必填,命中阈值,整数 >=2 且 <=capacity
+#   terminateAt 可选,终止线,整数 >threshold 且 <=capacity,不写 = 不启用终止
+#   granularity 可选,exact | normalized,不写按 normalized
+- insert:
+      - id: dsh-loop-guard
+        name: "dsh-loop-guard"
+        config: {}
